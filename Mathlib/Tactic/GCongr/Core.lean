@@ -453,7 +453,7 @@ This is used as the default side-goal discharger,
 it calls the `gcongr_discharger` extensible tactic.
 -/
 def gcongrDischarger (goal : MVarId) : MetaM Unit := Elab.Term.TermElabM.run' do
-  trace[Meta.gcongr] "Attempting to discharge side goal {goal}"
+  withTraceNode `Meta.gcongr (fun _ => return m! "attempting to discharge side goal {goal}") do
   let [] ← Elab.Tactic.run goal <|
       Elab.Tactic.evalTactic (Unhygienic.run `(tactic| gcongr_discharger))
     | failure
@@ -481,14 +481,14 @@ def _root_.Lean.MVarId.gcongrForward (hs : Array Expr) (g : MVarId) : MetaM Bool
   for h in hs do
     try
       tacs.firstM fun (n, tac) =>
-        withTraceNode `Meta.gcongr (return m!"{·.emoji} trying {n} on {h} : {← inferType h}") do
+        withTraceNode `Meta.gcongr (fun _ => return m!"trying {n} on {h} : {← inferType h}") do
           tac.eval h g
       return true
     catch _ => setMCtx mctx
     try
       let h ← h.applySymm
       tacs.firstM fun (n, tac) =>
-        withTraceNode `Meta.gcongr (return m!"{·.emoji} trying {n} on {h} : {← inferType h}") do
+        withTraceNode `Meta.gcongr (fun _ => return m!"trying {n} on {h} : {← inferType h}") do
           tac.eval h g
       return true
     catch _ => setMCtx mctx
@@ -721,7 +721,8 @@ partial def _root_.Lean.MVarId.gcongr
     lemmas := lemmas ++ relImpRelLemma lhsArgs.size
   for lem in lemmas do
     let (mainGoals, sideGoals) ← try
-      withReducible <| applyGCongrLemma g lem
+      withTraceNode `Meta.gcongr (fun _ => return m!"trying {lem.declName}") do
+        withReducible <| applyGCongrLemma g lem
     catch _ =>
       setMCtx mctx
       continue
